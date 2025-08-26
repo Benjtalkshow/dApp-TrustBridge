@@ -20,6 +20,21 @@ import { NETWORK_CONFIG } from "@/config/contracts";
 
 const decimalsCache = new Map<string, number>();
 
+// Check if contract is deployed and accessible
+async function isContractDeployed(contractId: string): Promise<boolean> {
+  try {
+    // Try to call a simple method to verify contract exists
+    await callScVal(
+      "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+      contractId,
+      "decimals",
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function buildSimulatedTx(
   server: rpc.Server,
   caller: string,
@@ -29,13 +44,16 @@ async function buildSimulatedTx(
 ) {
   // Any G... account with a valid sequence is fine for simulation
   const account = await server.getAccount(caller);
-  return new TransactionBuilder(account, {
+
+  const tx = new TransactionBuilder(account, {
     fee: "100000",
     networkPassphrase: NETWORK_CONFIG.networkPassphrase,
   })
     .addOperation(c.call(fn, ...args))
     .setTimeout(30)
     .build();
+
+  return tx;
 }
 
 async function callScVal(
@@ -48,22 +66,34 @@ async function callScVal(
   const contract = new Contract(contractId);
   const tx = await buildSimulatedTx(server, wallet, contract, fn, ...args);
   const sim = await server.simulateTransaction(tx);
-  // retval can be in result.retval (newer) or results[0].retval (older)
-  // @ts-expect-error - Soroban RPC response structure varies between versions
-  const retval = sim?.result?.retval ?? sim?.results?.[0]?.retval;
+
+  // Handle simulation errors silently
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new Error(`Simulation failed: ${sim.error}`);
+  }
+
+  // Extract retval from simulation result
+  const retval = sim?.result?.retval;
+
   if (!retval) {
     throw new Error(`No retval when calling ${fn} on ${contractId}`);
   }
-  return xdr.ScVal.fromXDR(retval, "base64");
+
+  // The retval is already an ScVal object, no need to parse
+  return retval;
 }
 
 async function getDecimals(
   wallet: string,
   contractId: string,
 ): Promise<number> {
-  if (decimalsCache.has(contractId)) return decimalsCache.get(contractId)!;
+  if (decimalsCache.has(contractId)) {
+    return decimalsCache.get(contractId)!;
+  }
+
   const sc = await callScVal(wallet, contractId, "decimals");
   const n = Number(scValToNative(sc));
+
   decimalsCache.set(contractId, n);
   return n;
 }
@@ -89,6 +119,12 @@ export async function getTokenBalance(
   tokenContractId: string,
 ): Promise<string> {
   try {
+    // First check if contract is deployed
+    const isDeployed = await isContractDeployed(tokenContractId);
+    if (!isDeployed) {
+      return "0";
+    }
+
     const [balSc, dec] = await Promise.all([
       callScVal(
         wallet,
@@ -100,9 +136,10 @@ export async function getTokenBalance(
     ]);
 
     const raw = scValToNative(balSc) as bigint; // u128
-    return bigintToDecimalString(raw, dec);
-  } catch (e) {
-    console.error(`getTokenBalance(${tokenContractId}) failed:`, e);
+    const result = bigintToDecimalString(raw, dec);
+    return result;
+  } catch {
+    // Silently handle all contract errors and return 0
     return "0";
   }
 }
@@ -121,5 +158,6 @@ export async function getAllBalances(
       return [symbol, bal] as const;
     }),
   );
+
   return Object.fromEntries(entries) as Record<string, string>;
 }
