@@ -6,7 +6,6 @@ import { useWalletContext } from "@/providers/wallet.provider";
 import { TOKENS } from "@/config/contracts";
 import {
   getAllBalances,
-  getTokenBalance,
 } from "@/helpers/wallet-balance.helper";
 
 export function useWalletBalance() {

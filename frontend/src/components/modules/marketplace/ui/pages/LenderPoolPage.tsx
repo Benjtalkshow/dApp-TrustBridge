@@ -14,7 +14,6 @@ export default function LenderPoolPage() {
   const {
     balancesFormatted,
     loading: loadingBalances,
-    refresh,
   } = useWalletBalance();
 
   // Modal states
@@ -231,7 +230,7 @@ export default function LenderPoolPage() {
                           <td className="p-4">
                             <div className="text-sm text-gray-400">
                               Your Balance:{" "}
-                              {(balancesFormatted as any)[asset.symbol] ?? "0"}{" "}
+                              {(balancesFormatted as Record<string, string>)[asset.symbol] ?? "0"}{" "}
                               {asset.symbol}
                             </div>
                           </td>
