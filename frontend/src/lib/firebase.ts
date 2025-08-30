@@ -3,15 +3,26 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || (() => { throw new Error('NEXT_PUBLIC_FIREBASE_API_KEY is required') })(),
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || (() => { throw new Error('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is required') })(),
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || (() => { throw new Error('NEXT_PUBLIC_FIREBASE_PROJECT_ID is required') })(),
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (() => { throw new Error('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is required') })(),
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || (() => { throw new Error('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID is required') })(),
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || (() => { throw new Error('NEXT_PUBLIC_FIREBASE_APP_ID is required') })(),
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder_key',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'placeholder.firebaseapp.com',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'placeholder_project',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'placeholder.appspot.com',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '123456789',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || 'placeholder_app_id',
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export { doc, getDoc, setDoc };
+// Only initialize Firebase if we're in the browser and have valid config
+let app: any = null;
+let db: any = null;
+
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'placeholder_key') {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } catch (error) {
+    console.warn('Firebase initialization failed:', error);
+  }
+}
+
+export { db, doc, getDoc, setDoc };
 
