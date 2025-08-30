@@ -1,3 +1,5 @@
+"use client";
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { db, doc, getDoc, setDoc } from "@/lib/firebase";
 import { UserProfile, UserProfileFormData } from "@/@types/user.entity";
@@ -31,7 +33,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [walletAddress]);
 
   const loadProfile = async () => {
-    if (!walletAddress) return;
+    if (!walletAddress || !db) return;
 
     try {
       setLoading(true);
@@ -53,6 +55,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const saveProfile = async (data: UserProfileFormData) => {
     if (!walletAddress) {
       toast.error("Please connect your wallet first");
+      return;
+    }
+
+    if (!db) {
+      toast.error("Firebase is not available");
       return;
     }
 
