@@ -1,3 +1,5 @@
+"use client";
+
 import { kit } from "@/config/wallet-kit";
 import { useWalletContext } from "@/providers/wallet.provider";
 import { ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
@@ -27,22 +29,24 @@ export const useWallet = () => {
 
         // Check if user profile exists and create if it doesn't
         try {
-          const userDoc = await getDoc(doc(db, "users", address));
+          if (db) {
+            const userDoc = await getDoc(doc(db, "users", address));
 
-          if (!userDoc.exists()) {
-            const now = Date.now();
-            const initialProfile: UserProfile = {
-              walletAddress: address,
-              firstName: "",
-              lastName: "",
-              country: "",
-              phoneNumber: "",
-              createdAt: now,
-              updatedAt: now,
-            };
+            if (!userDoc.exists()) {
+              const now = Date.now();
+              const initialProfile: UserProfile = {
+                walletAddress: address,
+                firstName: "",
+                lastName: "",
+                country: "",
+                phoneNumber: "",
+                createdAt: now,
+                updatedAt: now,
+              };
 
-            await setDoc(doc(db, "users", address), initialProfile);
-            toast.success("Welcome! Please complete your profile.");
+              await setDoc(doc(db, "users", address), initialProfile);
+              toast.success("Welcome! Please complete your profile.");
+            }
           }
         } catch (error) {
           console.error("Error creating initial profile:", error);
