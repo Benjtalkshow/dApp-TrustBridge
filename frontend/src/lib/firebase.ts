@@ -12,8 +12,8 @@ const firebaseConfig = {
 };
 
 // Only initialize Firebase if we're in the browser and have valid config
-let app: any = null;
-let db: any = null;
+let app: ReturnType<typeof initializeApp> | null = null;
+let db: ReturnType<typeof getFirestore> | null = null;
 
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'placeholder_key') {
   try {

@@ -49,7 +49,6 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
     handleBorrow,
     isHealthy,
     isAtRisk,
-    isDangerous,
     isBorrowDisabled,
   } = useBorrow({ isOpen, onClose, poolId });
 
@@ -364,7 +363,7 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
                 <strong>Risk Disclaimer:</strong> Borrowing involves liquidation
                 risk. Monitor your health factor regularly and maintain adequate
                 collateral ratios to avoid liquidation. Market volatility can
-                affect your position's health factor.
+                affect your position&apos;s health factor.
               </div>
             </div>
           </div>

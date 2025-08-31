@@ -1,5 +1,5 @@
 import { TRUSTBRIDGE_POOL_ID, TOKENS } from "@/config/contracts";
-import { PoolContractV2, RequestType } from "@blend-capital/blend-sdk";
+import { PoolContractV2 } from "@blend-capital/blend-sdk";
 
 /**
  * Health factor calculation result
@@ -154,12 +154,13 @@ export async function getUserPositions(walletAddress: string): Promise<PositionI
 /**
  * Get user's supplied amount for a specific asset
  * 
- * @param pool - Pool contract instance
- * @param walletAddress - User's wallet address
- * @param tokenAddress - Token contract address
+ * @param _pool - Pool contract instance (unused for now)
+ * @param _walletAddress - User's wallet address (unused for now)
+ * @param _tokenAddress - Token contract address (unused for now)
  * @returns Supplied amount
  */
-async function getUserSuppliedAmount(pool: PoolContractV2, walletAddress: string, tokenAddress: string): Promise<number> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function getUserSuppliedAmount(_pool: PoolContractV2, _walletAddress: string, _tokenAddress: string): Promise<number> {
   try {
     // This would call the pool contract to get user's supplied amount
     // For now, return mock data
@@ -173,12 +174,13 @@ async function getUserSuppliedAmount(pool: PoolContractV2, walletAddress: string
 /**
  * Get user's borrowed amount for a specific asset
  * 
- * @param pool - Pool contract instance
- * @param walletAddress - User's wallet address
- * @param tokenAddress - Token contract address
+ * @param _pool - Pool contract instance (unused for now)
+ * @param _walletAddress - User's wallet address (unused for now)
+ * @param _tokenAddress - Token contract address (unused for now)
  * @returns Borrowed amount
  */
-async function getUserBorrowedAmount(pool: PoolContractV2, walletAddress: string, tokenAddress: string): Promise<number> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function getUserBorrowedAmount(_pool: PoolContractV2, _walletAddress: string, _tokenAddress: string): Promise<number> {
   try {
     // This would call the pool contract to get user's borrowed amount
     // For now, return mock data
