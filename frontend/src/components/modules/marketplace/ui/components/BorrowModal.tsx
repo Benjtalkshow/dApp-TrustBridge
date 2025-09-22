@@ -1,6 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useBorrow } from "../../hooks/useBorrow.hook";
+import { 
+  monitorHealthFactor, 
+  getHealthFactorAlerts, 
+  calculateMaxBorrowable,
+  calculateLiquidationPrice,
+  type HealthFactorResult 
+} from "@/helpers/health-factor.helper";
+import { useWalletContext } from "@/providers/wallet.provider";
 
 interface PoolReserve {
   symbol: string;
@@ -26,6 +35,12 @@ interface BorrowModalProps {
 }
 
 export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
+  const { walletAddress } = useWalletContext();
+  const [healthFactor, setHealthFactor] = useState<HealthFactorResult | null>(null);
+  const [alerts, setAlerts] = useState<string[]>([]);
+  const [maxBorrowable, setMaxBorrowable] = useState<number>(0);
+  const [liquidationPrice, setLiquidationPrice] = useState<number>(0);
+
   const {
     borrowAmount,
     loading,
@@ -34,15 +49,42 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
     handleBorrow,
     isHealthy,
     isAtRisk,
-    isDangerous,
     isBorrowDisabled,
   } = useBorrow({ isOpen, onClose, poolId });
+
+  // Monitor health factor in real-time
+  useEffect(() => {
+    if (!isOpen || !walletAddress) return;
+
+    const stopMonitoring = monitorHealthFactor(walletAddress, (result) => {
+      setHealthFactor(result);
+      setAlerts(getHealthFactorAlerts(result));
+      
+      // Calculate max borrowable amount
+      const maxBorrow = calculateMaxBorrowable(
+        result.collateralValue,
+        85, // USDC collateral factor
+        result.borrowedValue
+      );
+      setMaxBorrowable(maxBorrow);
+      
+      // Calculate liquidation price
+      const liqPrice = calculateLiquidationPrice(
+        result.borrowedValue,
+        result.collateralValue,
+        85 // USDC collateral factor
+      );
+      setLiquidationPrice(liqPrice);
+    });
+
+    return stopMonitoring;
+  }, [isOpen, walletAddress]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="card bg-dark-secondary p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="card bg-dark-secondary p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <i className="fas fa-arrow-down text-warning text-xl"></i>
@@ -58,14 +100,46 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
           </button>
         </div>
 
+        {/* Real-time Health Factor Alerts */}
+        {alerts.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {alerts.map((alert, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded border-l-4 ${
+                  alert.includes('CRITICAL')
+                    ? 'bg-red-900 bg-opacity-20 border-red-500 text-red-300'
+                    : alert.includes('WARNING')
+                    ? 'bg-yellow-900 bg-opacity-20 border-yellow-500 text-yellow-300'
+                    : 'bg-blue-900 bg-opacity-20 border-blue-500 text-blue-300'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <i className={`fas ${
+                    alert.includes('CRITICAL') ? 'fa-exclamation-triangle' : 'fa-info-circle'
+                  } mt-0.5`}></i>
+                  <div className="text-sm">{alert}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-4">
           {/* Amount Input */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="form-label">Amount to Borrow</label>
-              <span className="text-xs text-gray-400 bg-dark-tertiary px-2 py-1 rounded">
-                USDC
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 bg-dark-tertiary px-2 py-1 rounded">
+                  USDC
+                </span>
+                {maxBorrowable > 0 && (
+                  <span className="text-xs text-success">
+                    Max: ${maxBorrowable.toLocaleString()}
+                  </span>
+                )}
+              </div>
             </div>
             <input
               type="number"
@@ -74,6 +148,7 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
               value={borrowAmount}
               onChange={(e) => setBorrowAmount(e.target.value)}
               min="0"
+              max={maxBorrowable}
               step="0.01"
               disabled={loading}
             />
@@ -82,9 +157,11 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
               {[100, 500, 1000, 2500].map((amount) => (
                 <button
                   key={amount}
-                  className="btn-secondary text-xs flex-1"
-                  onClick={() => setBorrowAmount(amount.toString())}
-                  disabled={loading}
+                  className={`btn-secondary text-xs flex-1 ${
+                    amount > maxBorrowable ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  onClick={() => amount <= maxBorrowable && setBorrowAmount(amount.toString())}
+                  disabled={loading || amount > maxBorrowable}
                 >
                   ${amount}
                 </button>
@@ -100,59 +177,60 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
                 Borrow Overview
               </h4>
 
-              {/* Health Factor Card */}
+              {/* Enhanced Health Factor Card */}
               <div className="card p-4 mb-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">Health Factor</span>
                   <div className="flex items-center gap-1">
-                    {isHealthy ? (
+                    {healthFactor?.riskLevel === 'safe' ? (
                       <i className="fas fa-check-circle text-success"></i>
+                    ) : healthFactor?.riskLevel === 'warning' ? (
+                      <i className="fas fa-exclamation-triangle text-warning"></i>
                     ) : (
-                      <i
-                        className={`fas fa-exclamation-triangle ${isAtRisk ? "text-warning" : "text-danger"}`}
-                      ></i>
+                      <i className="fas fa-exclamation-triangle text-danger"></i>
                     )}
                   </div>
                 </div>
                 <div
                   className={`text-xl font-bold ${
-                    isHealthy
+                    healthFactor?.riskLevel === 'safe'
                       ? "text-success"
-                      : isAtRisk
+                      : healthFactor?.riskLevel === 'warning'
                         ? "text-warning"
                         : "text-danger"
                   }`}
                 >
-                  {estimates.healthFactor > 0
-                    ? estimates.healthFactor.toFixed(2)
-                    : "--"}
+                  {healthFactor?.healthFactor ? healthFactor.healthFactor.toFixed(2) : estimates.healthFactor.toFixed(2)}
                 </div>
                 <div className="mt-2">
                   <div className="w-full bg-dark-tertiary rounded-full h-1.5">
                     <div
                       className={`h-1.5 rounded-full transition-all ${
-                        isHealthy
+                        healthFactor?.riskLevel === 'safe'
                           ? "bg-success"
-                          : isAtRisk
+                          : healthFactor?.riskLevel === 'warning'
                             ? "bg-warning"
                             : "bg-danger"
                       }`}
                       style={{
-                        width: `${Math.min(100, Math.max(0, (estimates.healthFactor / 3) * 100))}%`,
+                        width: `${Math.min(100, Math.max(0, ((healthFactor?.healthFactor || estimates.healthFactor) / 3) * 100))}%`,
                       }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {isHealthy
-                      ? "Healthy position"
-                      : isAtRisk
-                        ? "At risk"
-                        : "Liquidation risk"}
-                  </p>
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>
+                      {healthFactor?.riskLevel === 'safe'
+                        ? "Healthy position"
+                        : healthFactor?.riskLevel === 'warning'
+                          ? "At risk"
+                          : "Liquidation risk"}
+                    </span>
+                    <span>Liquidation: 1.0</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Borrow Stats */}
+              {/* Enhanced Borrow Stats */}
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="card p-3">
                   <div className="flex items-center gap-1 mb-1">
@@ -176,61 +254,101 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
                 </div>
               </div>
 
-              {/* Required Collateral */}
-              <div className="card p-3 mb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <i className="fas fa-dollar-sign text-gray-400 text-xs"></i>
-                    <span className="text-xs text-gray-400">
-                      Required Collateral
-                    </span>
+              {/* Collateral Information */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="card p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <i className="fas fa-dollar-sign text-gray-400 text-xs"></i>
+                      <span className="text-xs text-gray-400">
+                        Required Collateral
+                      </span>
+                    </div>
+                    <div className="text-sm font-semibold text-white">
+                      $
+                      {estimates.requiredCollateral > 0
+                        ? estimates.requiredCollateral.toLocaleString()
+                        : "--"}
+                    </div>
                   </div>
-                  <div className="text-sm font-semibold text-white">
-                    $
-                    {estimates.requiredCollateral > 0
-                      ? estimates.requiredCollateral.toLocaleString()
-                      : "--"}
+                </div>
+                <div className="card p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <i className="fas fa-chart-line text-gray-400 text-xs"></i>
+                      <span className="text-xs text-gray-400">
+                        Liquidation Price
+                      </span>
+                    </div>
+                    <div className="text-sm font-semibold text-white">
+                      ${liquidationPrice > 0 ? liquidationPrice.toFixed(2) : "--"}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Current Position Summary */}
+              {healthFactor && (
+                <div className="card p-3 mb-3">
+                  <div className="text-xs text-gray-400 mb-2">Current Position</div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-400">Collateral:</span>
+                      <span className="text-white ml-1">${healthFactor.collateralValue.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Borrowed:</span>
+                      <span className="text-white ml-1">${healthFactor.borrowedValue.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Ratio:</span>
+                      <span className="text-white ml-1">{healthFactor.collateralRatio.toFixed(1)}%</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Max Borrow:</span>
+                      <span className="text-success ml-1">${maxBorrowable.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Health Factor Warning */}
-          {estimates.healthFactor > 0 && (
+          {/* Enhanced Health Factor Warning */}
+          {(healthFactor || estimates.healthFactor > 0) && (
             <div
               className={`p-3 rounded border-l-4 ${
-                isHealthy
+                (healthFactor?.riskLevel || (isHealthy ? 'safe' : isAtRisk ? 'warning' : 'danger')) === 'safe'
                   ? "bg-green-900 bg-opacity-20 border-success text-success"
-                  : isAtRisk
+                  : (healthFactor?.riskLevel || (isHealthy ? 'safe' : isAtRisk ? 'warning' : 'danger')) === 'warning'
                     ? "bg-yellow-900 bg-opacity-20 border-warning text-warning"
                     : "bg-red-900 bg-opacity-20 border-danger text-danger"
               }`}
             >
               <div className="flex items-start gap-2">
-                {isHealthy ? (
+                {(healthFactor?.riskLevel || (isHealthy ? 'safe' : isAtRisk ? 'warning' : 'danger')) === 'safe' ? (
                   <i className="fas fa-check-circle mt-0.5"></i>
                 ) : (
                   <i className="fas fa-exclamation-triangle mt-0.5"></i>
                 )}
                 <div className="text-sm">
-                  {isHealthy && (
-                    <>
-                      <strong>Healthy Position:</strong> You have sufficient
-                      collateral buffer for this borrow amount.
-                    </>
-                  )}
-                  {isAtRisk && (
-                    <>
-                      <strong>Position At Risk:</strong> Consider reducing
-                      borrow amount or adding more collateral.
-                    </>
-                  )}
-                  {isDangerous && (
-                    <>
-                      <strong>Dangerous Position:</strong> This could lead to
-                      immediate liquidation!
-                    </>
+                  {healthFactor?.recommendations?.[0] || (
+                    isHealthy ? (
+                      <>
+                        <strong>Healthy Position:</strong> You have sufficient
+                        collateral buffer for this borrow amount.
+                      </>
+                    ) : isAtRisk ? (
+                      <>
+                        <strong>Position At Risk:</strong> Consider reducing
+                        borrow amount or adding more collateral.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Dangerous Position:</strong> This could lead to
+                        immediate liquidation!
+                      </>
+                    )
                   )}
                 </div>
               </div>
@@ -244,7 +362,8 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
               <div className="text-sm">
                 <strong>Risk Disclaimer:</strong> Borrowing involves liquidation
                 risk. Monitor your health factor regularly and maintain adequate
-                collateral ratios to avoid liquidation.
+                collateral ratios to avoid liquidation. Market volatility can
+                affect your position&apos;s health factor.
               </div>
             </div>
           </div>
@@ -259,9 +378,13 @@ export function BorrowModal({ isOpen, onClose, poolId }: BorrowModalProps) {
               Cancel
             </button>
             <button
-              className="btn-danger"
+              className={`${
+                healthFactor?.riskLevel === 'liquidatable' || healthFactor?.riskLevel === 'danger'
+                  ? 'btn-danger'
+                  : 'btn-primary'
+              }`}
               onClick={handleBorrow}
-              disabled={isBorrowDisabled}
+              disabled={isBorrowDisabled || healthFactor?.riskLevel === 'liquidatable'}
             >
               {loading ? (
                 <>
