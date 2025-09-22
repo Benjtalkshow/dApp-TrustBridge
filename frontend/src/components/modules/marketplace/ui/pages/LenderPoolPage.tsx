@@ -7,9 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SupplyUSDCModal } from "../components/SupplyUSDCModal";
 import { ProvideLiquidityModal } from "../components/ProvideLiquidityModal";
+import { useWalletBalance } from "@/components/modules/marketplace/hooks/useWalletBalance.hook";
 import Image from "next/image";
 
 export default function LenderPoolPage() {
+  const {
+    balancesFormatted,
+    loading: loadingBalances,
+  } = useWalletBalance();
+
   // Modal states
   const [showSupplyUSDCModal, setShowSupplyUSDCModal] = useState(false);
   const [showProvideLiquidityModal, setShowProvideLiquidityModal] =
@@ -171,6 +177,9 @@ export default function LenderPoolPage() {
                         <th className="text-left p-4 text-gray-400 font-medium">
                           Role
                         </th>
+                        <th className="text-left p-4 text-gray-400 font-medium">
+                          Your Balance
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -218,6 +227,13 @@ export default function LenderPoolPage() {
                               {asset.reserve}
                             </Badge>
                           </td>
+                          <td className="p-4">
+                            <div className="text-sm text-gray-400">
+                              Your Balance:{" "}
+                              {(balancesFormatted as Record<string, string>)[asset.symbol] ?? "0"}{" "}
+                              {asset.symbol}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -232,7 +248,14 @@ export default function LenderPoolPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Amount</span>
-                    <span className="text-gray-400">USDC</span>
+                    <div className="text-right leading-tight">
+                      <span className="text-gray-400 block">USDC</span>
+                      <span className="text-xs text-gray-500">
+                        {loadingBalances
+                          ? "Loading balance…"
+                          : `Wallet Balance: ${balancesFormatted.USDC ?? "0"} USDC`}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-3xl font-bold text-white">0.00</div>
                   <div className="flex gap-3">

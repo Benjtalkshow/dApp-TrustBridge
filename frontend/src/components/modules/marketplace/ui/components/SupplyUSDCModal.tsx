@@ -1,6 +1,7 @@
 "use client";
 
 import { useSupply } from "../../hooks/useSupply.hook";
+import { useWalletBalance } from "@/components/modules/marketplace/hooks/useWalletBalance.hook";
 
 interface SupplyUSDCModalProps {
   isOpen: boolean;
@@ -14,6 +15,12 @@ export function SupplyUSDCModal({
   onSuccess,
 }: SupplyUSDCModalProps) {
   const {
+    balancesFormatted,
+    loading: loadingBalances,
+    refresh,
+  } = useWalletBalance();
+
+  const {
     supplyAmount,
     loading,
     estimates,
@@ -23,7 +30,11 @@ export function SupplyUSDCModal({
   } = useSupply({
     isOpen,
     onClose,
-    onSuccess,
+    onSuccess: () => {
+      // existing behavior
+      onSuccess?.();
+      refresh(); // re-fetch balances after confirmed tx
+    },
   });
 
   if (!isOpen) return null;
@@ -60,8 +71,10 @@ export function SupplyUSDCModal({
             <label htmlFor="supply-amount" className="text-sm text-neutral-300">
               Amount to Supply
             </label>
-            <span className="text-xs text-neutral-400 bg-neutral-700 px-2 py-1 rounded">
-              USDC
+            <span className="text-xs text-gray-500">
+              {loadingBalances
+                ? "Loading..."
+                : `Wallet Balance: ${balancesFormatted.USDC ?? "0"} USDC`}
             </span>
           </div>
           <div className="relative">
