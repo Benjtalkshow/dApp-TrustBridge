@@ -30,6 +30,15 @@ export const useWallet = () => {
           if (db) {
             const userDoc = await getDoc(doc(db, "users", address));
 
+            let displayName = name; // fallback to wallet name
+            if (userDoc.exists()) {
+              const userData = userDoc.data() as UserProfile;
+              if (userData.firstName || userData.lastName) {
+                displayName = `${userData.firstName} ${userData.lastName}`.trim();
+              }
+            }
+      
+            setWalletInfo(address, displayName);
 
             if (!userDoc.exists()) {
               const now = Date.now();
@@ -45,39 +54,14 @@ export const useWallet = () => {
 
               await setDoc(doc(db, "users", address), initialProfile);
               toast.success("Welcome! Please complete your profile.");
-
-          let displayName = name; // fallback to wallet name
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as UserProfile;
-            if (userData.firstName || userData.lastName) {
-              displayName = `${userData.firstName} ${userData.lastName}`.trim();
-            }
-          }
-    
-          setWalletInfo(address, displayName);
-
-          if (!userDoc.exists()) {
-            const now = Date.now();
-            const initialProfile: UserProfile = {
-              walletAddress: address,
-              firstName: "",
-              lastName: "",
-              country: "",
-              phoneNumber: "",
-              createdAt: now,
-              updatedAt: now,
-            };
-
-            await setDoc(doc(db, "users", address), initialProfile);
-            toast.success("Welcome! Please complete your profile.");
-          } else {
-            // Show welcome back message for existing users
-            const userData = userDoc.data() as UserProfile;
-            if (userData.firstName || userData.lastName) {
-              toast.success(`Welcome back, ${displayName}!`);
             } else {
-              toast.success("Welcome back! Please complete your profile.");
-
+              // Show welcome back message for existing users
+              const userData = userDoc.data() as UserProfile;
+              if (userData.firstName || userData.lastName) {
+                toast.success(`Welcome back, ${displayName}!`);
+              } else {
+                toast.success("Welcome back! Please complete your profile.");
+              }
             }
           }
         } catch (error) {
