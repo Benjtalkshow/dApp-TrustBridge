@@ -539,6 +539,8 @@ export default function Marketplace() {
         onClose={closeProvideLiquidityModal}
         poolData={mockPoolData}
       />
+      {/* RoleSelectionModal is handled by parent pages */}
     </main>
+     /* RoleSelectionModal is handled by parent pages */
   );
 }

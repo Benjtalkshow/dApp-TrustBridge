@@ -13,6 +13,144 @@ export default function Dashboard() {
     );
   };
 
+  // Create breakdown content for tooltips
+  const createBreakdownContent = (
+    positions: UserPosition[],
+    type: "supplied" | "borrowed",
+  ) => {
+    if (!positions || positions.length === 0) {
+      return <div className="text-gray-400">No data available</div>;
+    }
+
+    const filteredPositions = positions.filter((pos) => pos[type] > 0);
+
+    if (filteredPositions.length === 0) {
+      return <div className="text-gray-400">No {type} positions</div>;
+    }
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium text-gray-300">Breakdown:</div>
+        {filteredPositions.map((position) => (
+          <div key={position.asset} className="flex justify-between text-xs">
+            <span className="text-gray-400">{position.symbol}:</span>
+            <span className="text-white">{formatCurrency(position[type])}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Create Available Balance breakdown content
+  const createAvailableBalanceContent = () => {
+    if (!userPositions || userPositions.length === 0) {
+      return <div className="text-gray-400">No data available</div>;
+    }
+
+    const availableByAsset = userPositions
+      .map((position) => {
+        const walletBalanceForAsset = 0; // TODO: Get actual wallet balance for this asset
+        const available = Math.max(
+          0,
+          walletBalanceForAsset + position.supplied - position.borrowed,
+        );
+
+        return {
+          symbol: position.symbol,
+          available: available,
+          walletBalance: walletBalanceForAsset,
+          supplied: position.supplied,
+          borrowed: position.borrowed,
+        };
+      })
+      .filter((asset) => asset.available > 0);
+
+    if (availableByAsset.length === 0) {
+      return <div className="text-gray-400">No available balance</div>;
+    }
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium text-gray-300">Breakdown:</div>
+        {availableByAsset.map((asset) => (
+          <div key={asset.symbol} className="flex justify-between text-xs">
+            <span className="text-gray-400">{asset.symbol}:</span>
+            <span className="text-white">
+              {formatCurrency(asset.available)}
+            </span>
+          </div>
+        ))}
+        {availableByAsset.some((asset) => asset.walletBalance > 0) && (
+          <div className="text-xs text-gray-500 mt-1 pt-1 border-t border-gray-700">
+            Includes wallet balance
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Create Active Loans breakdown content
+  const createActiveLoansContent = () => {
+    if (!userPositions || userPositions.length === 0) {
+      return <div className="text-gray-400">No data available</div>;
+    }
+
+    const poolLoanCounts: Record<string, number> = {};
+    Object.keys(POOL_CONFIG).forEach((poolType) => {
+      poolLoanCounts[poolType] = 0;
+    });
+
+    userPositions.forEach((position) => {
+      if (position.borrowed > 0) {
+        const poolType = getPoolTypeForAsset(position.symbol);
+        if (poolType) {
+          poolLoanCounts[poolType]++;
+        }
+      }
+    });
+
+    const poolsWithLoans = Object.entries(poolLoanCounts)
+      .filter(([, count]) => count > 0)
+      .map(([poolType, count]) => ({
+        poolType: poolType === "MAIN_POOL" ? "Main Pool" : "Secondary Pool",
+        count,
+      }));
+
+    if (poolsWithLoans.length === 0) {
+      return <div className="text-gray-400">No active loans</div>;
+    }
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium text-gray-300">Breakdown:</div>
+        {poolsWithLoans.map((pool) => (
+          <div key={pool.poolType} className="flex justify-between text-xs">
+            <span className="text-gray-400">{pool.poolType}:</span>
+            <span className="text-white">{pool.count}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const getWalletDisplayName = () => {
+    if (!address) return "Usuario";
+    
+    // Use profile name if available
+    if (profile && (profile.firstName || profile.lastName)) {
+      const profileName = `${profile.firstName} ${profile.lastName}`.trim();
+      if (profileName) return profileName;
+    }
+    
+    // 2: Use walletName if it's not "Freighter"
+    if (walletName && walletName !== "Freighter") {
+      return walletName;
+    }
+    
+    // Fallback: Use truncated address
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
   return (
     <div className="container mx-auto px-4 md:px-6 pt-24 pb-16 max-w-6xl">
       <h1 className="text-3xl font-bold mb-2">
@@ -23,20 +161,18 @@ export default function Dashboard() {
       </p>
 
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           title={t('dashboard.totalSupplied')}
           value="$456,289"
           change="+1.8%"
           changeType="positive"
-          icon="fas fa-coins"
         />
         <StatCard
           title={t('dashboard.totalBorrowed')}
           value="$125,750"
           change="+0.5%"
           changeType="positive"
-          icon="fas fa-hand-holding-dollar"
         />
         <StatCard
           title={t('dashboard.availableBalance')}
@@ -77,17 +213,17 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {/* USDC Position */}
-              <tr>
-                <td>
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full overflow-hidden mr-3">
-                      <Image
-                        src="/img/tokens/usdc.png"
-                        alt="USDC Token"
-                        width={32}
-                        height={32}
-                      />
+              {userPositions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                    <div className="flex flex-col items-center">
+                      <i className="fas fa-wallet text-3xl mb-3 text-gray-300"></i>
+                      <p className="text-lg font-medium mb-2">
+                        No positions yet
+                      </p>
+                      <p className="text-sm">
+                        Start by supplying assets or taking out loans
+                      </p>
                     </div>
                     <div>
                       <div className="font-medium">USDC</div>
