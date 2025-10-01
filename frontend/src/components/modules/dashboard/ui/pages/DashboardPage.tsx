@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import StatCard from "../cards/StatCard";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
+  
   const handleManagePosition = () => {
     alert(
       "Position management functionality will be implemented in the full version.",
@@ -13,35 +16,35 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto px-4 md:px-6 pt-24 pb-16 max-w-6xl">
       <h1 className="text-3xl font-bold mb-2">
-        Bienvenido de vuelta, <span className="text-success">GABU...HE3JH</span>
+        {t('dashboard.title', { address: 'GABU...HE3JH' })}
       </h1>
       <p className="text-gray-400 mb-6">
-        Revisa tus posiciones y actividad en un solo lugar
+        {t('dashboard.subtitle')}
       </p>
 
       {/* Stats Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <StatCard
-          title="Total Supplied"
+          title={t('dashboard.totalSupplied')}
           value="$456,289"
           change="+1.8%"
           changeType="positive"
           icon="fas fa-coins"
         />
         <StatCard
-          title="Total Borrowed"
+          title={t('dashboard.totalBorrowed')}
           value="$125,750"
           change="+0.5%"
           changeType="positive"
           icon="fas fa-hand-holding-dollar"
         />
         <StatCard
-          title="Balance Disponible"
+          title={t('dashboard.availableBalance')}
           value="$330,539"
           icon="fas fa-sack-dollar"
         />
         <StatCard
-          title="Préstamos Activos"
+          title={t('dashboard.activeLoans')}
           value="3"
           icon="fas fa-file-contract"
         />
@@ -49,28 +52,28 @@ export default function Dashboard() {
 
       {/* Activity Chart */}
       <div className="card p-6 mb-8" style={{ height: "300px" }}>
-        <h2 className="text-lg font-medium mb-4">Actividad Reciente</h2>
+        <h2 className="text-lg font-medium mb-4">{t('dashboard.recentActivity')}</h2>
         <div className="flex items-center justify-center h-5/6 text-gray-400">
           <div className="text-center">
             <i className="fas fa-chart-line text-4xl mb-3"></i>
-            <p>Gráfica de actividad cargando...</p>
+            <p>{t('dashboard.activityChartLoading')}</p>
           </div>
         </div>
       </div>
 
       {/* Current Positions Table */}
       <div className="card p-6 mb-8">
-        <h2 className="text-lg font-medium mb-4">Posiciones Actuales</h2>
+        <h2 className="text-lg font-medium mb-4">{t('dashboard.currentPositions')}</h2>
         <div className="overflow-x-auto">
           <table className="custom-table">
             <thead>
               <tr>
-                <th>Activo</th>
-                <th>Cantidad</th>
-                <th>APY</th>
-                <th>Colateral</th>
-                <th>Estado</th>
-                <th>Acción</th>
+                <th>{t('dashboard.asset')}</th>
+                <th>{t('dashboard.quantity')}</th>
+                <th>{t('dashboard.apy')}</th>
+                <th>{t('dashboard.collateral')}</th>
+                <th>{t('dashboard.status')}</th>
+                <th>{t('dashboard.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -88,7 +91,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <div className="font-medium">USDC</div>
-                      <div className="text-xs text-gray-400">USD Coin</div>
+                      <div className="text-xs text-gray-400">{t('dashboard.usdCoin')}</div>
                     </div>
                   </div>
                 </td>
@@ -104,7 +107,7 @@ export default function Dashboard() {
                 </td>
                 <td>
                   <div className="bg-green-900 bg-opacity-20 text-green-400 text-xs inline-block px-2 py-1 rounded">
-                    Activo
+                    {t('dashboard.active')}
                   </div>
                 </td>
                 <td>
@@ -112,7 +115,7 @@ export default function Dashboard() {
                     className="btn-secondary text-xs px-2 py-1"
                     onClick={handleManagePosition}
                   >
-                    Gestionar
+                    {t('common.manage')}
                   </button>
                 </td>
               </tr>
@@ -130,7 +133,7 @@ export default function Dashboard() {
                     <div>
                       <div className="font-medium">XLM</div>
                       <div className="text-xs text-gray-400">
-                        Stellar Lumens
+                        {t('dashboard.stellarLumens')}
                       </div>
                     </div>
                   </div>
@@ -147,7 +150,7 @@ export default function Dashboard() {
                 </td>
                 <td>
                   <div className="bg-blue-900 bg-opacity-20 text-blue-400 text-xs inline-block px-2 py-1 rounded">
-                    Collateral
+                    {t('dashboard.collateralBadge')}
                   </div>
                 </td>
                 <td>
@@ -155,7 +158,7 @@ export default function Dashboard() {
                     className="btn-secondary text-xs px-2 py-1"
                     onClick={handleManagePosition}
                   >
-                    Gestionar
+                    {t('common.manage')}
                   </button>
                 </td>
               </tr>
