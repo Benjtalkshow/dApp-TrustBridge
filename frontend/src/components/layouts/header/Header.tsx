@@ -1,36 +1,37 @@
 "use client"
 
-import Image from "next/image"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { useWallet } from "@/hooks/use-wallet"
-import { useWalletContext } from "@/providers/wallet.provider"
-import { useUserContext } from "@/providers/user.provider"
-import { WalletManagementDialog } from "@/components/modules/wallet/ui/wallet-management-dialog"
-import { Wallet } from "lucide-react"
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useWallet } from "@/components/modules/auth/hooks/wallet.hook";
+import { useWalletContext } from "@/providers/wallet.provider";
+import { useUserContext } from "@/providers/user.provider";
+import { useTranslation } from "@/hooks/useTranslation";
+import { WalletManagementDialog } from "@/components/modules/wallet/ui/wallet-management-dialog";
+import { LanguageSelector } from "@/components/ui/language-selector";
+import { Wallet } from "lucide-react";
 
 export default function Header() {
-  const pathname = usePathname()
-  const { walletAddress, walletName } = useWalletContext()
-  const { profile } = useUserContext()
-  const { handleConnect, handleDisconnect } = useWallet()
-  const [isWalletManagementOpen, setIsWalletManagementOpen] = useState(false)
+  const pathname = usePathname();
+  const { walletAddress, walletName } = useWalletContext();
+  const { profile } = useUserContext();
+  const { handleConnect, handleDisconnect } = useWallet();
+  const { t } = useTranslation();
+  const [isWalletManagementOpen, setIsWalletManagementOpen] = useState(false);
 
-  const isPasskeyUser = profile?.authMethod === "passkey"
+  const isPasskeyUser = profile?.authMethod === "passkey";
 
   const truncateAddress = (address: string) => {
-    if (!address) return ""
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
-  }
+    if (!address) return "";
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   const handleMobileMenuClick = () => {
-    alert("Mobile menu will be implemented in the full version.")
-  }
+    alert("Mobile menu will be implemented in the full version.");
+  };
 
-  const isActive = (path: string) => {
-    return pathname === path
-  }
+  const isActive = (path: string) => pathname === path;
 
   return (
     <>
@@ -38,23 +39,44 @@ export default function Header() {
         <div className="flex items-center">
           <div className="flex items-center mr-6">
             <Link href="/" className="flex items-center">
-              <Image src="/img/TrustBridge.png" alt="TrustBridge Logo" width={40} height={40} className="mr-2" />
+              <Image
+                src="/img/TrustBridge.png"
+                alt="TrustBridge Logo"
+                width={40}
+                height={40}
+                className="mr-2"
+              />
             </Link>
           </div>
           <nav className="desktop-menu hidden md:flex space-x-1">
-            <Link href="/dashboard" className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}>
-              Dashboard
+            <Link
+              href="/dashboard"
+              className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}
+            >
+              {t('navigation.dashboard')}
             </Link>
-            <Link href="/dashboard/marketplace" className={`nav-link ${isActive("/marketplace") ? "active" : ""}`}>
-              Marketplace
+            <Link
+              href="/dashboard/marketplace"
+              className={`nav-link ${isActive("/marketplace") ? "active" : ""}`}
+            >
+              {t('navigation.marketplace')}
             </Link>
-            <Link href="/dashboard/profile" className={`nav-link ${isActive("/profile") ? "active" : ""}`}>
-              Profile
+            <Link
+              href="/dashboard/profile"
+              className={`nav-link ${isActive("/profile") ? "active" : ""}`}
+            >
+              {t('navigation.profile')}
             </Link>
           </nav>
         </div>
+
         <div className="flex items-center space-x-3">
-          <span className="network-badge hidden md:inline-flex">Stellar Testnet</span>
+          <span className="network-badge hidden md:inline-flex">
+            {t('header.stellarTestnet')}
+          </span>
+
+          {/* Language Selector */}
+          <LanguageSelector />
 
           {/* Desktop Wallet Section */}
           <div className="hidden sm:flex items-center gap-3">
@@ -70,21 +92,26 @@ export default function Header() {
                   </button>
                 )}
                 <div className="wallet-btn">
-                  <i className="fas fa-wallet"></i>
+                  <i className="fas fa-wallet mr-2"></i>
                   <span className="wallet-address">
-                    {walletName && walletName !== "Freighter" ? walletName : truncateAddress(walletAddress)}
+                    {walletName && walletName !== "Freighter"
+                      ? walletName
+                      : truncateAddress(walletAddress)}
                   </span>
-                  <i className="fas fa-chevron-down text-xs text-gray-400"></i>
+                  <i className="fas fa-chevron-down ml-2 text-xs text-gray-400"></i>
                 </div>
-                <button className="btn-secondary text-sm px-3 py-1.5" onClick={handleDisconnect}>
+                <button
+                  className="btn-secondary text-sm px-3 py-1.5"
+                  onClick={handleDisconnect}
+                >
                   <i className="fas fa-sign-out-alt mr-1.5"></i>
-                  Disconnect
+                  {t('header.disconnect')}
                 </button>
               </>
             ) : (
               <button className="wallet-btn" onClick={handleConnect}>
                 <i className="fas fa-wallet mr-2"></i>
-                <span>Connect Wallet</span>
+                <span>{t('header.connectWallet')}</span>
               </button>
             )}
           </div>
@@ -96,7 +123,10 @@ export default function Header() {
         </div>
       </header>
 
-      <WalletManagementDialog open={isWalletManagementOpen} onOpenChange={setIsWalletManagementOpen} />
+      <WalletManagementDialog
+        open={isWalletManagementOpen}
+        onOpenChange={setIsWalletManagementOpen}
+      />
     </>
-  )
+  );
 }
