@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWallet } from "@/components/modules/auth/hooks/wallet.hook";
 import { useWalletContext } from "@/providers/wallet.provider";
+import { useTranslation } from "@/hooks/useTranslation";
+import { LanguageSelector } from "@/components/ui/language-selector";
 
 export default function Header() {
   const pathname = usePathname();
   const { walletAddress, walletName } = useWalletContext();
   const { handleConnect, handleDisconnect } = useWallet();
+  const { t } = useTranslation();
 
   const truncateAddress = (address: string) => {
     if (!address) return "";
@@ -43,26 +46,29 @@ export default function Header() {
             href="/dashboard"
             className={`nav-link ${isActive("/dashboard") ? "active" : ""}`}
           >
-            Dashboard
+            {t('navigation.dashboard')}
           </Link>
           <Link
             href="/dashboard/marketplace"
             className={`nav-link ${isActive("/marketplace") ? "active" : ""}`}
           >
-            Marketplace
+            {t('navigation.marketplace')}
           </Link>
           <Link
             href="/dashboard/profile"
             className={`nav-link ${isActive("/profile") ? "active" : ""}`}
           >
-            Profile
+            {t('navigation.profile')}
           </Link>
         </nav>
       </div>
       <div className="flex items-center space-x-3">
         <span className="network-badge hidden md:inline-flex">
-          Stellar Testnet
+          {t('header.stellarTestnet')}
         </span>
+
+        {/* Language Selector */}
+        <LanguageSelector />
 
         {/* Desktop Wallet Section */}
         <div className="hidden sm:flex items-center gap-3">
@@ -84,13 +90,13 @@ export default function Header() {
                 onClick={handleDisconnect}
               >
                 <i className="fas fa-sign-out-alt mr-1.5"></i>
-                Disconnect
+                {t('header.disconnect')}
               </button>
             </>
           ) : (
             <button className="wallet-btn" onClick={handleConnect}>
               <i className="fas fa-wallet mr-2"></i>
-              <span>Connect Wallet</span>
+              <span>{t('header.connectWallet')}</span>
             </button>
           )}
         </div>
